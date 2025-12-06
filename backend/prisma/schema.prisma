@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceMode {
+  IN
+  OUT
+}
+
+
+model User {
+  id           Int           @id @default(autoincrement())
+  name         String
+  email        String        @unique
+  password     String
+  role         String        @default("employee")
+  createdAt    DateTime      @default(now())
+  Attendance   Attendance[]
+  lastLocation LastLocation? // <--- relation back to LastLocation
+  dealers      Dealer[]      @relation("UserDealers")
+  visits       Visit[]
+  pjps        PJP[]
+  claims         Claim[]
+  approvedClaims Claim[] @relation("ClaimApprover")
+
+}
+
+model Attendance {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  timestamp DateTime @default(now())
+  lat       Float?
+  lng       Float?
+  photoUrl  String?
+  mode      AttendanceMode?
+  deviceId  String?
+  createdAt DateTime @default(now())
+}
+
+model LastLocation {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  lat       Float
+  lng       Float
+  updatedAt DateTime @updatedAt
+}
+
+model Dealer {
+  id        Int      @id @default(autoincrement())
+  name      String
+  type      String   // "dealer" or "sub-dealer"
+
+  address   String?
+  city      String?
+
+  // OLD phone can be reused or ignored later
+  phone           String?
+  contactName     String?
+  contactMobile   String?
+
+  lat        Float?
+  lng        Float?
+
+  createdBy Int?
+  createdByUser User? @relation("UserDealers", fields: [createdBy], references: [id])
+
+  approved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  visits    Visit[]
+  pjpItems  PJPItem[]
+}
+model PJP {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  date      DateTime  // PJP date (we'll treat it as date-only in code)
+  notes     String?
+  items     PJPItem[]
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, date]) // one PJP per user per date
+}
+
+model PJPItem {
+  id          Int       @id @default(autoincrement())
+  pjpId       Int
+  pjp         PJP       @relation(fields: [pjpId], references: [id])
+  dealerId    Int
+  dealer      Dealer    @relation(fields: [dealerId], references: [id])
+  sequence    Int       // 1, 2, 3...
+  plannedTime DateTime?
+}
+
+
+
+model Visit {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  dealerId   Int
+  dealer     Dealer   @relation(fields: [dealerId], references: [id])
+  checkInAt  DateTime
+  checkOutAt DateTime?
+  lat        Float?
+  lng        Float?
+  notes      String?
+  createdAt  DateTime @default(now())
+}
+
+model Claim {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  user        User         @relation(fields: [userId], references: [id])
+
+  date        DateTime     // claim date
+  amount      Float
+  type        String?      // e.g. "Travel", "DA", "Other"
+  description String?
+  distanceKm  Float?
+
+  status      ClaimStatus  @default(PENDING)
+  createdAt   DateTime     @default(now())
+
+  approvedAt  DateTime?
+  approvedBy  Int?
+  approvedByUser User? @relation("ClaimApprover", fields: [approvedBy], references: [id])
+}
+
