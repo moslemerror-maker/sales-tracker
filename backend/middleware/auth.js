@@ -15,6 +15,8 @@ module.exports = (req, res, next) => {
   if (!token) {
     return res.status(401).json({ error: "No token provided" });
   }
+  console.log("VERIFY JWT_SECRET:", JWT_SECRET);
+  console.log("VERIFY token start:", token.slice(0, 25));
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) {

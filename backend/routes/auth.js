@@ -29,20 +29,25 @@ router.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.id, role: user.role },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+  { userId: user.id, role: user.role },
+  JWT_SECRET,
+  { expiresIn: "7d" }
+);
 
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    });
+// DEBUG
+console.log("LOGIN JWT_SECRET:", JWT_SECRET);
+console.log("LOGIN token start:", token.slice(0, 25));
+
+res.json({
+  token,
+  user: {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  },
+});
+
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Server error" });
