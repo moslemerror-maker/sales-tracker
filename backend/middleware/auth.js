@@ -1,27 +1,31 @@
 // backend/middleware/auth.js
+
 const jwt = require("jsonwebtoken");
+const { JWT_SECRET } = require("../config/jwt");
 
-function authMiddleware(req, res, next) {
-  const authHeader = req.headers["authorization"];
-  if (!authHeader) {
-    return res.status(401).json({ error: "No authorization header" });
+module.exports = (req, res, next) => {
+  const authHeader = req.headers.authorization || "";
+
+  if (!authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No token provided" });
   }
 
-  const parts = authHeader.split(" ");
-  if (parts.length !== 2 || parts[0] !== "Bearer") {
-    return res.status(401).json({ error: "Invalid authorization header" });
+  const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "No token provided" });
   }
 
-  const token = parts[1];
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      console.log("JWT verify error:", err.message);
+      return res.status(401).json({ error: "Invalid or expired token" });
+    }
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // decoded will contain { userId, role, ... }
-    req.user = decoded;
+    req.user = {
+      userId: decoded.userId,
+      role: decoded.role,
+    };
     next();
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid or expired token" });
-  }
-}
-
-module.exports = authMiddleware;
+  });
+};
