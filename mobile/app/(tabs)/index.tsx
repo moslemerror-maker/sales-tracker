@@ -16,11 +16,10 @@ import {
 import { CameraView, useCameraPermissions } from "expo-camera";
 import * as Location from "expo-location";
 import { Picker } from "@react-native-picker/picker";
-
-// ⚠️ Replace with your PC LAN IP
-const API_BASE_URL = "http://172.20.10.2:4000"; // CHANGE THIS
+import { API_BASE_URL } from "../../constants";
 
 type AttendanceMode = "IN" | "OUT";
+type TabKey = "attendance" | "visits" | "pjp" | "tada" | "addDealer";
 
 // date helpers
 const formatYMD = (d: Date) => d.toISOString().slice(0, 10);
@@ -52,14 +51,11 @@ export default function MainScreen() {
   const [authBusy, setAuthBusy] = useState(false);
 
   // TABS: attendance | visits | pjp | tada | addDealer
-  const [activeTab, setActiveTab] = useState<
-    "attendance" | "visits" | "pjp" | "tada" | "addDealer"
-  >("attendance");
+  const [activeTab, setActiveTab] = useState<TabKey>("attendance");
 
   // Attendance mode: null until user clicks Time In or Time Out
-  const [attendanceMode, setAttendanceMode] = useState<AttendanceMode | null>(
-    null
-  );
+  const [attendanceMode, setAttendanceMode] =
+    useState<AttendanceMode | null>(null);
 
   // Dealers & visits
   const [dealers, setDealers] = useState<any[]>([]);
@@ -87,7 +83,7 @@ export default function MainScreen() {
   const [pjpLoading, setPjpLoading] = useState(false);
   const [pjpSaving, setPjpSaving] = useState(false);
 
-    // TA/DA claims
+  // TA/DA claims
   const [claimDate, setClaimDate] = useState<Date>(new Date());
   const [claimAmount, setClaimAmount] = useState("");
   const [claimType, setClaimType] = useState<"Travel" | "DA" | "Other">(
@@ -98,7 +94,6 @@ export default function MainScreen() {
   const [claimSaving, setClaimSaving] = useState(false);
   const [claims, setClaims] = useState<any[]>([]);
   const [claimsLoading, setClaimsLoading] = useState(false);
-
 
   // Permissions on mount
   useEffect(() => {
@@ -148,117 +143,7 @@ export default function MainScreen() {
   }, [locationPermission, token]);
 
   // ---- Helpers ----
-    const loadMyClaims = async () => {
-    if (!token) return;
-    try {
-      setClaimsLoading(true);
 
-      const today = new Date();
-      const from = new Date(today);
-      from.setDate(today.getDate() - 30); // last 30 days
-
-      const fromYMD = formatYMD(from);
-      const toYMD = formatYMD(today);
-
-      const res = await fetch(
-        `${API_BASE_URL}/claims/my?from=${fromYMD}&to=${toYMD}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-    const handleSubmitClaim = async () => {
-    if (!token) {
-      Alert.alert("Please login first");
-      return;
-    }
-
-    if (!claimAmount) {
-      Alert.alert("Missing amount", "Please enter claim amount.");
-      return;
-    }
-
-    const amountNum = Number(claimAmount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      Alert.alert("Invalid amount", "Amount must be a positive number.");
-      return;
-    }
-
-    try {
-      setClaimSaving(true);
-
-      const body: any = {
-        date: formatYMD(claimDate),
-        amount: amountNum,
-        type: claimType,
-        description: claimDesc || null,
-      };
-
-      if (claimDistance) {
-        const distNum = Number(claimDistance);
-        if (!isNaN(distNum) && distNum >= 0) {
-          body.distanceKm = distNum;
-        }
-      }
-
-      const res = await fetch(`${API_BASE_URL}/claims`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.log("Submit claim error:", data);
-        Alert.alert("Error", data.error || "Failed to submit claim");
-        return;
-      }
-
-      Alert.alert("Claim submitted", "Your TA/DA claim has been recorded.");
-
-      // Reset form
-      setClaimAmount("");
-      setClaimDesc("");
-      setClaimDistance("");
-      setClaimType("Travel");
-
-      // Refresh list
-      await loadMyClaims();
-    } catch (err) {
-      console.error("Submit claim error:", err);
-      Alert.alert("Error", "Could not submit claim");
-    } finally {
-      setClaimSaving(false);
-    }
-  };
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.log("Load claims error:", data);
-        Alert.alert("Error", data.error || "Failed to load claims");
-        return;
-      }
-
-      if (Array.isArray(data)) {
-        setClaims(data);
-      } else {
-        setClaims([]);
-      }
-    } catch (err) {
-      console.error("Load claims error:", err);
-      Alert.alert("Error", "Could not load claims");
-    } finally {
-      setClaimsLoading(false);
-    }
-  };
-
-  
   const loadDealers = async () => {
     if (!token) return;
     try {
@@ -328,24 +213,61 @@ export default function MainScreen() {
     }
   };
 
+  const loadMyClaims = async () => {
+    if (!token) return;
+    try {
+      setClaimsLoading(true);
+
+      const today = new Date();
+      const from = new Date(today);
+      from.setDate(today.getDate() - 30); // last 30 days
+
+      const fromYMD = formatYMD(from);
+      const toYMD = formatYMD(today);
+
+      const res = await fetch(
+        `${API_BASE_URL}/claims/my?from=${fromYMD}&to=${toYMD}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.log("Load claims error:", data);
+        Alert.alert("Error", data.error || "Failed to load claims");
+        return;
+      }
+
+      if (Array.isArray(data)) {
+        setClaims(data);
+      } else {
+        setClaims([]);
+      }
+    } catch (err) {
+      console.error("Load claims error:", err);
+      Alert.alert("Error", "Could not load claims");
+    } finally {
+      setClaimsLoading(false);
+    }
+  };
+
   // Auto-load PJP whenever user opens PJP tab or changes date
   useEffect(() => {
     if (token && activeTab === "pjp") {
       loadPjpForDate(pjpDate);
     }
   }, [token, activeTab, pjpDate]);
-    useEffect(() => {
+
+  // Auto-load claims whenever TA/DA tab opens
+  useEffect(() => {
     if (token && activeTab === "tada") {
       loadMyClaims();
     }
   }, [token, activeTab]);
-    useEffect(() => {
-    if (token && activeTab === "tada") {
-      loadMyClaims();
-    }
-  }, [token, activeTab]);
-
-
 
   // ---- Login ----
   const handleLogin = async () => {
@@ -393,6 +315,7 @@ export default function MainScreen() {
     setActiveVisit(null);
     setAttendanceMode(null);
     setPjpItems([]);
+    setClaims([]);
   };
 
   // ---- Attendance ----
@@ -635,6 +558,7 @@ export default function MainScreen() {
       return d;
     });
   };
+
   const changeClaimDate = (days: number) => {
     setClaimDate((prev) => {
       const d = new Date(prev);
@@ -642,77 +566,6 @@ export default function MainScreen() {
       return d;
     });
   };
-
-
-  const handleSubmitClaim = async () => {
-    if (!token) {
-      Alert.alert("Please login first");
-      return;
-    }
-
-    if (!claimAmount) {
-      Alert.alert("Missing amount", "Please enter claim amount.");
-      return;
-    }
-
-    const amountNum = Number(claimAmount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      Alert.alert("Invalid amount", "Amount must be a positive number.");
-      return;
-    }
-
-    try {
-      setClaimSaving(true);
-
-      const body: any = {
-        date: formatYMD(claimDate),
-        amount: amountNum,
-        type: claimType,
-        description: claimDesc || null,
-      };
-
-      if (claimDistance) {
-        const distNum = Number(claimDistance);
-        if (!isNaN(distNum) && distNum >= 0) {
-          body.distanceKm = distNum;
-        }
-      }
-
-      const res = await fetch(`${API_BASE_URL}/claims`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        console.log("Submit claim error:", data);
-        Alert.alert("Error", data.error || "Failed to submit claim");
-        return;
-      }
-
-      Alert.alert("Claim submitted", "Your TA/DA claim has been recorded.");
-
-      // Reset form
-      setClaimAmount("");
-      setClaimDesc("");
-      setClaimDistance("");
-      setClaimType("Travel");
-
-      // Refresh list
-      await loadMyClaims();
-    } catch (err) {
-      console.error("Submit claim error:", err);
-      Alert.alert("Error", "Could not submit claim");
-    } finally {
-      setClaimSaving(false);
-    }
-  };
-
 
   const handlePjpAddItem = () => {
     if (!pjpSelectedDealerId) {
@@ -803,6 +656,76 @@ export default function MainScreen() {
       Alert.alert("Error", "Could not save PJP");
     } finally {
       setPjpSaving(false);
+    }
+  };
+
+  // ---- TA/DA submit ----
+  const handleSubmitClaim = async () => {
+    if (!token) {
+      Alert.alert("Please login first");
+      return;
+    }
+
+    if (!claimAmount) {
+      Alert.alert("Missing amount", "Please enter claim amount.");
+      return;
+    }
+
+    const amountNum = Number(claimAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      Alert.alert("Invalid amount", "Amount must be a positive number.");
+      return;
+    }
+
+    try {
+      setClaimSaving(true);
+
+      const body: any = {
+        date: formatYMD(claimDate),
+        amount: amountNum,
+        type: claimType,
+        description: claimDesc || null,
+      };
+
+      if (claimDistance) {
+        const distNum = Number(claimDistance);
+        if (!isNaN(distNum) && distNum >= 0) {
+          body.distanceKm = distNum;
+        }
+      }
+
+      const res = await fetch(`${API_BASE_URL}/claims`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.log("Submit claim error:", data);
+        Alert.alert("Error", data.error || "Failed to submit claim");
+        return;
+      }
+
+      Alert.alert("Claim submitted", "Your TA/DA claim has been recorded.");
+
+      // Reset form
+      setClaimAmount("");
+      setClaimDesc("");
+      setClaimDistance("");
+      setClaimType("Travel");
+
+      // Refresh list
+      await loadMyClaims();
+    } catch (err) {
+      console.error("Submit claim error:", err);
+      Alert.alert("Error", "Could not submit claim");
+    } finally {
+      setClaimSaving(false);
     }
   };
 
@@ -1357,33 +1280,29 @@ export default function MainScreen() {
               </Text>
             )}
 
-            {!claimsLoading &&
-              claims.length > 0 && (
-                <View style={{ marginTop: 4 }}>
-                  {claims.map((c) => (
-                    <View key={c.id} style={styles.claimRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.claimTitle}>
-                          {formatYMD(new Date(c.date))} • Rs {c.amount}
-                        </Text>
-                        <Text style={styles.claimSubtitle}>
-                          {c.type || "TA/DA"}{" "}
-                          {c.distanceKm ? `• ${c.distanceKm} km` : ""}{" "}
-                          {c.description ? `• ${c.description}` : ""}
-                        </Text>
-                      </View>
-                      <View style={styles.claimStatusPill}>
-                        <Text style={styles.claimStatusText}>
-                          {c.status}
-                        </Text>
-                      </View>
+            {!claimsLoading && claims.length > 0 && (
+              <View style={{ marginTop: 4 }}>
+                {claims.map((c) => (
+                  <View key={c.id} style={styles.claimRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.claimTitle}>
+                        {formatYMD(new Date(c.date))} • Rs {c.amount}
+                      </Text>
+                      <Text style={styles.claimSubtitle}>
+                        {c.type || "TA/DA"}{" "}
+                        {c.distanceKm ? `• ${c.distanceKm} km` : ""}{" "}
+                        {c.description ? `• ${c.description}` : ""}
+                      </Text>
                     </View>
-                  ))}
-                </View>
-              )}
+                    <View style={styles.claimStatusPill}>
+                      <Text style={styles.claimStatusText}>{c.status}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </View>
         )}
-
 
         {/* Add Dealer tab */}
         {activeTab === "addDealer" && (
@@ -1467,9 +1386,9 @@ export default function MainScreen() {
 // Tab button helper
 function renderTabButton(
   label: string,
-  value: "attendance" | "visits" | "pjp" | "tada" | "addDealer",
-  activeTab: string,
-  setActiveTab: (v: any) => void
+  value: TabKey,
+  activeTab: TabKey,
+  setActiveTab: (v: TabKey) => void
 ) {
   const active = activeTab === value;
   return (
@@ -1783,7 +1702,9 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     paddingHorizontal: 6,
   },
-    claimRow: {
+
+  // Claims list
+  claimRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 6,
@@ -1812,5 +1733,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-
 });

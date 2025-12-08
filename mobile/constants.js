@@ -1,4 +1,7 @@
 // mobile/constants.js
 
-// Replace this with your actual PC LAN IP from ipconfig
-export const API_BASE_URL = "http://172.20.10.2:4000";
+// Change these when you move servers (Render → other host)
+export const API_BASE_URL = "https://sales-tracker-zriz.onrender.com";
+
+// For future use if you ever want different behavior
+export const BUILD_ENV = "production"; // or "dev"

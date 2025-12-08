@@ -14,7 +14,7 @@ const dealerRoutes = require("./routes/dealers");
 const visitRoutes = require("./routes/visits");
 const pjpRoutes = require("./routes/pjp");
 const claimsRoutes = require("./routes/claims");
-
+const dashboardRoutes = require("./routes/dashboard");
 
 const app = express();
 
@@ -29,6 +29,7 @@ app.use("/dealers", dealerRoutes);
 app.use("/visits", visitRoutes);
 app.use("/pjp", pjpRoutes);
 app.use("/claims", claimsRoutes);
+app.use("/dashboard", dashboardRoutes);
 
 
 // Basic health check route
